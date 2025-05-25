@@ -45,20 +45,51 @@ class OrderProcessor:
         try:
             # Load order data
             logger.info("Loading order data...")
-            df = pd.read_excel(self.order_excel_path, sheet_name="통합주문리스트")
+            try:
+                df = pd.read_excel(self.order_excel_path, sheet_name="통합주문리스트")
+            except ValueError:
+                # If sheet not found, use the first sheet
+                logger.info("Sheet '통합주문리스트' not found, using first sheet")
+                df = pd.read_excel(self.order_excel_path, sheet_name=0)
+                # df.to_excel("order_data.xlsx", index=False)
             self.order_df = df.iloc[:, 5:9].copy()
 
             # Load option data
             logger.info("Loading option data...")
-            self.option_df = pd.read_excel(
-                self.master_excel_path, sheet_name="옵션분리", header=1
-            ).dropna(subset=["상품명구분1"])
+            try:
+                self.option_df = pd.read_excel(
+                    self.master_excel_path, sheet_name="옵션분리", header=1
+                ).dropna(subset=["상품명구분1"])
+            except ValueError:
+                # If sheet not found, try to find a sheet with similar name or use first sheet
+                logger.info("Sheet '옵션분리' not found, using first sheet")
+                self.option_df = pd.read_excel(
+                    self.master_excel_path, sheet_name=0, header=1
+                ).dropna(subset=["상품명구분1"])
+            # self.option_df.to_excel("option_data.xlsx", index=False)
 
             # Load master data
             logger.info("Loading master data...")
-            self.master_df = pd.read_excel(
-                self.master_excel_path, sheet_name="마스터", header=1
-            )
+            try:
+                self.master_df = pd.read_excel(
+                    self.master_excel_path, sheet_name="마스터", header=1
+                )
+
+            except ValueError:
+                # If sheet not found, try to find a sheet with similar name or use second sheet if available
+                logger.info(
+                    "Sheet '마스터' not found, trying second sheet or first sheet"
+                )
+                excel_file = pd.ExcelFile(self.master_excel_path)
+                if len(excel_file.sheet_names) > 1:
+                    self.master_df = pd.read_excel(
+                        self.master_excel_path, sheet_name=1, header=1
+                    )
+                else:
+                    self.master_df = pd.read_excel(
+                        self.master_excel_path, sheet_name=0, header=1
+                    )
+            # self.master_df.to_excel("master_data.xlsx", index=False)
 
             logger.info("Data loading completed successfully")
 

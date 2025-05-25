@@ -3,10 +3,7 @@ import pandas as pd
 ORDER_LIST_EXCEL = "통합주문리스트.xlsx"
 ORDER_LIST_EXCEL_SHEET = "통합주문리스트"
 
-df = pd.read_excel(
-    ORDER_LIST_EXCEL,
-    sheet_name=ORDER_LIST_EXCEL_SHEET,
-)
+df = pd.read_excel(ORDER_LIST_EXCEL, sheet_name=ORDER_LIST_EXCEL_SHEET,)
 
 # Extract only neccesary part for formatting
 order_df = df.iloc[:, 5:9]
@@ -18,9 +15,7 @@ order_df[option_col_name] = order_df[option_col_name].fillna("NO")
 # Replace "[쿠폰]" to ""
 option_col_name = order_df.iloc[:, 1].name
 order_df[option_col_name] = order_df[option_col_name].str.replace(
-    "\[쿠폰\]",
-    "",
-    regex=True,
+    "\[쿠폰\]", "", regex=True,
 )
 
 # Make 상품명구분 col
@@ -31,10 +26,7 @@ order_df["상품명구분"] = (
 )
 
 # delete space
-order_df["상품명구분"] = order_df["상품명구분"].str.replace(
-    " ",
-    "",
-)
+order_df["상품명구분"] = order_df["상품명구분"].str.replace(" ", "",)
 
 
 MASTER_EXCEL = "쇼핑몰연동마스터.xlsx"
@@ -54,11 +46,7 @@ import numpy as np
 # Let's use a unique placeholder. If "needed" is fine, you can use that.
 PLACEHOLDER = "__NEEDS_ACTUAL_VALUE__"
 condition = order_df["상품명구분"].isin(option_df["상품명구분1"])
-order_df["옵션분리"] = np.where(
-    condition,
-    PLACEHOLDER,
-    None,
-)
+order_df["옵션분리"] = np.where(condition, PLACEHOLDER, None,)
 
 # 2a. Create a lookup map (Series) from option_df:
 #     Index = option_df["상품명구분1"]
@@ -67,9 +55,9 @@ order_df["옵션분리"] = np.where(
 #       - drop_duplicates(subset=['상품명구분1'], keep='first'): keeps the first occurrence.
 #       - You could also use keep='last' or aggregate if needed, but for a simple lookup, 'first' or 'last' is common.
 #       - If "상품명구분1" should be unique in option_df for this lookup, ensure that.
-lookup_series = option_df.drop_duplicates(
-    subset=["상품명구분1"], keep="first"
-).set_index("상품명구분1")["옵션분리구분2"]
+lookup_series = option_df.drop_duplicates(subset=["상품명구분1"], keep="first").set_index(
+    "상품명구분1"
+)["옵션분리구분2"]
 
 # 2b. Identify rows in order_df that need their "옵션분리" value updated
 rows_to_update_mask = order_df["옵션분리"] == PLACEHOLDER
@@ -162,9 +150,7 @@ for index, order_row in order_df.iterrows():
                 # --- Populate columns for the new row ---
 
                 # 1. Columns derived from original order_df row, possibly modified
-                new_row["판매몰상품번호/딜번호[출력]"] = option_source_row[
-                    "판매몰상품번호/딜번호"
-                ]
+                new_row["판매몰상품번호/딜번호[출력]"] = option_source_row["판매몰상품번호/딜번호"]
                 new_row["원상품명(쇼핑몰)[출력]"] = option_source_row[
                     "원상품명_쇼핑몰"
                 ]  # Usually same base product name
@@ -230,9 +216,7 @@ def get_base_id(prod_id):
     return prod_id
 
 
-final_order_df["_sort_key"] = final_order_df["판매몰상품번호/딜번호[출력]"].apply(
-    get_base_id
-)
+final_order_df["_sort_key"] = final_order_df["판매몰상품번호/딜번호[출력]"].apply(get_base_id)
 final_order_df["_sub_sort_key"] = final_order_df["판매몰상품번호/딜번호[출력]"].apply(
     lambda x: int(x.split("-")[1]) if isinstance(x, str) and "-" in x else 0
 )
@@ -262,20 +246,14 @@ col_list = [
     "매입단가",
     "단위수량",
 ]
-master_lookup_df = master_df.drop_duplicates(subset=["상품명구분1"], keep="first")[
-    col_list
-]
+master_lookup_df = master_df.drop_duplicates(subset=["상품명구분1"], keep="first")[col_list]
 
 # 2. Perform a left merge
 #    This will add '매입처' and '가격' columns from master_lookup_df to order_df
 #    where '상품명구분' matches '상품명구분1'.
 #    Rows in order_df without a match will get NaN in the new columns.
 final_order_df = pd.merge(
-    final_order_df,
-    master_lookup_df,
-    left_on="상품명구분",
-    right_on="상품명구분1",
-    how="left",
+    final_order_df, master_lookup_df, left_on="상품명구분", right_on="상품명구분1", how="left",
 )
 
 #      merge would create '가격_x' and '가격_y').
@@ -284,8 +262,6 @@ if "상품명구분1" in final_order_df.columns:
 
 final_order_df["발주수량"] = final_order_df["단위수량"] * final_order_df["수량[출력]"]
 final_order_df.drop(columns="단위수량", inplace=True)
-final_order_df["기준판매가합계"] = (
-    final_order_df["발주수량"] * final_order_df["기준판매가"]
-)
+final_order_df["기준판매가합계"] = final_order_df["발주수량"] * final_order_df["기준판매가"]
 final_order_df["매입가합계"] = final_order_df["발주수량"] * final_order_df["매입단가"]
 final_order_df.to_csv("final_order_df.csv")
